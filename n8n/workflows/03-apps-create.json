@@ -34,8 +34,7 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}",
+        "respondWith": "firstIncomingItem",
         "options": {}
       },
       "id": "rw-apps-create",

@@ -35,7 +35,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"ok\": true }",
+        "responseBody": "{\"ok\":true}",
         "options": {}
       },
       "id": "rw-exec-step",

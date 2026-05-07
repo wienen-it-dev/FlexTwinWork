@@ -34,8 +34,7 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"ok\": true, \"id\": $json.id, \"status\": $json.status }",
+        "respondWith": "firstIncomingItem",
         "options": {}
       },
       "id": "rw-exec-finish",
