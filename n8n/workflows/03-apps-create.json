@@ -5,7 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "apps",
-        "responseMode": "responseNode",
+        "responseMode": "lastNode",
         "options": {}
       },
       "id": "wh-apps-create",
@@ -31,22 +31,10 @@
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
-    },
-    {
-      "parameters": {
-        "respondWith": "firstIncomingItem",
-        "options": {}
-      },
-      "id": "rw-apps-create",
-      "name": "Respond",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [720, 300]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Insert App", "type": "main", "index": 0 }]] },
-    "Insert App": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Insert App", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }

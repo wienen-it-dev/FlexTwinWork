@@ -5,7 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "executions/:id/step",
-        "responseMode": "responseNode",
+        "responseMode": "lastNode",
         "options": {}
       },
       "id": "wh-exec-step",
@@ -18,7 +18,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH ins AS (INSERT INTO execution_steps (execution_id, step_index, step_type, step_id, outcome, variables) VALUES ($1::uuid, (($2::jsonb)->>'step_index')::int, ($2::jsonb)->>'step_type', ($2::jsonb)->>'step_id', ($2::jsonb)->>'outcome', ($2::jsonb)->'variables') RETURNING execution_id) UPDATE executions SET variables = ($2::jsonb)->'variables' WHERE id = $1::uuid RETURNING id::text AS execution_id",
+        "query": "WITH ins AS (INSERT INTO execution_steps (execution_id, step_index, step_type, step_id, outcome, variables) VALUES ($1::uuid, (($2::jsonb)->>'step_index')::int, ($2::jsonb)->>'step_type', ($2::jsonb)->>'step_id', ($2::jsonb)->>'outcome', ($2::jsonb)->'variables') RETURNING execution_id) UPDATE executions SET variables = ($2::jsonb)->'variables' WHERE id = $1::uuid RETURNING true AS ok",
         "options": {
           "queryReplacement": "={{ JSON.stringify([$json.params.id, $json.body]) }}"
         }
@@ -31,23 +31,10 @@
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\"ok\":true}",
-        "options": {}
-      },
-      "id": "rw-exec-step",
-      "name": "Respond",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [720, 300]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Insert Step", "type": "main", "index": 0 }]] },
-    "Insert Step": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Insert Step", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }
