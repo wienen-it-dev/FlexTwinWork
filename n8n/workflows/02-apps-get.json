@@ -1,0 +1,54 @@
+{
+  "name": "FWT - GET /apps/:id (detail)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "apps/:id",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-apps-get",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "fwt-apps-get"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT a.id::text AS id, a.name, a.status, a.current_version, v.metadata, v.steps, v.blockly_state, to_char(a.updated_at, 'YYYY-MM-DD\"T\"HH24:MI:SSOF') AS updated_at FROM apps a JOIN app_versions v ON v.app_id = a.id AND v.version = a.current_version WHERE a.id = $1::uuid LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify([$json.params.id]) }}"
+        }
+      },
+      "id": "pg-apps-get",
+      "name": "Query App",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [480, 300],
+      "credentials": {
+        "postgres": { "name": "Postgres FlexWorkTwin" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "rw-apps-get",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Query App", "type": "main", "index": 0 }]] },
+    "Query App": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

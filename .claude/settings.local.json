@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "PowerShell(npm --version)",
+      "PowerShell(node --version)",
+      "PowerShell(Get-Command winget, scoop, choco, nvm -ErrorAction SilentlyContinue)",
+      "PowerShell(winget install --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements --silent 2>&1)"
+    ]
+  }
+}

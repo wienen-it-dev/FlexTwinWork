@@ -1,0 +1,54 @@
+{
+  "name": "FWT - POST /apps (create)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "apps",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-apps-create",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "fwt-apps-create"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH new_app AS (INSERT INTO apps (name) VALUES (($1::jsonb)->>'name') RETURNING id), new_ver AS (INSERT INTO app_versions (app_id, version, metadata, steps, blockly_state) SELECT id, 1, ($1::jsonb)->'metadata', ($1::jsonb)->'steps', ($1::jsonb)->'blockly_state' FROM new_app RETURNING app_id) SELECT app_id::text AS id FROM new_ver",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify([$json.body]) }}"
+        }
+      },
+      "id": "pg-apps-create",
+      "name": "Insert App",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [480, 300],
+      "credentials": {
+        "postgres": { "name": "Postgres FlexWorkTwin" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "rw-apps-create",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Insert App", "type": "main", "index": 0 }]] },
+    "Insert App": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

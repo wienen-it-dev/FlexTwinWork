@@ -1,0 +1,23 @@
+{
+  "name": "@fwt/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./blockDefs": "./src/blockDefs.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "peerDependencies": {
+    "blockly": "^11.1.1"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "blockly": "^11.1.1",
+    "typescript": "^5.5.3"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "name": "FWT - PUT /apps/:id (update / new version)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "apps/:id",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-apps-update",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "fwt-apps-update"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH bumped AS (UPDATE apps SET current_version = current_version + 1, updated_at = now(), name = COALESCE(($2::jsonb)->>'name', name), status = COALESCE(($2::jsonb)->>'status', status) WHERE id = $1::uuid RETURNING id, current_version), new_ver AS (INSERT INTO app_versions (app_id, version, metadata, steps, blockly_state) SELECT id, current_version, ($2::jsonb)->'metadata', ($2::jsonb)->'steps', ($2::jsonb)->'blockly_state' FROM bumped RETURNING app_id, version) SELECT app_id::text AS id, version FROM new_ver",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify([$json.params.id, $json.body]) }}"
+        }
+      },
+      "id": "pg-apps-update",
+      "name": "Update App",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [480, 300],
+      "credentials": {
+        "postgres": { "name": "Postgres FlexWorkTwin" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "rw-apps-update",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Update App", "type": "main", "index": 0 }]] },
+    "Update App": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

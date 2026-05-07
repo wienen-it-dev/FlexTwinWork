@@ -1,0 +1,51 @@
+{
+  "name": "FWT - GET /apps (list)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "apps",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-apps-list",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "fwt-apps-list"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id::text, name, status, current_version, to_char(updated_at, 'YYYY-MM-DD\"T\"HH24:MI:SSOF') AS updated_at FROM apps WHERE status != 'archived' ORDER BY updated_at DESC",
+        "options": {}
+      },
+      "id": "pg-apps-list",
+      "name": "Query Apps",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [480, 300],
+      "credentials": {
+        "postgres": { "name": "Postgres FlexWorkTwin" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "rw-apps-list",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Query Apps", "type": "main", "index": 0 }]] },
+    "Query Apps": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

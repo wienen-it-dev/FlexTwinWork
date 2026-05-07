@@ -1,0 +1,21 @@
+{
+  "name": "flexworktwin",
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:editor": "npm --workspace @fwt/editor run dev",
+    "dev:runtime": "npm --workspace @fwt/runtime run dev",
+    "build": "npm --workspaces --if-present run build",
+    "typecheck": "npm --workspaces --if-present run typecheck",
+    "stack:up": "docker compose up -d",
+    "stack:down": "docker compose down",
+    "stack:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  }
+}
