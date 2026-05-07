@@ -425,6 +425,7 @@ Wenn alle Schritte funktionieren: System läuft. Bei Problemen siehe nächster A
 | `no configuration file provided: not found` bei `docker compose` | Du bist im falschen Verzeichnis (Projekt liegt eine Ebene tiefer als erwartet) | `pwd` prüfen, in den Ordner mit `docker-compose.yml` wechseln (oder Inhalt von `<repo>/` flach in `/opt/flexworktwin/` ziehen) |
 | `/editor/` oder `/runtime/` zeigt leere Seite, Network-Tab zeigt 404 auf `/assets/...` | Build wurde ohne `--base` gemacht, Asset-Pfade gehen an Caddys `handle_path` vorbei | Mit `--base=/editor/` bzw. `--base=/runtime/` neu bauen (siehe 9b), dann Hard-Reload im Browser |
 | n8n-Logs zeigen endlos `Found credential with no ID` bei jedem Webhook | Workflow-JSON referenziert Credential nur mit `name`, n8n ≥1.80 verlangt zusätzlich `id` | Sicherstellen dass `n8n/credentials.json` ein `"id"`-Feld hat und alle Workflows `"credentials": { "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" } }` referenzieren. Dann `docker compose down -v` + `docker compose up -d` (Volumes weg, neu importieren) |
+| 404 auf `/webhook/apps/:id` (oder andere `:param`-Pfade), aber `/webhook/apps` funktioniert | n8n ≥1.85 routet dynamische Pfade über `/webhook/<webhookId>/<path>`, statische über `/webhook/<path>` | Im Frontend (`apps/*/src/api.ts`) für die `:id`-Endpunkte den jeweiligen `webhookId`-Prefix vor den Pfad ziehen. Frontend neu bauen mit `--base` |
 
 ---
 
