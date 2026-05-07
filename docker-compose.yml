@@ -18,7 +18,7 @@ services:
       retries: 12
 
   n8n:
-    image: n8nio/n8n:1.73.1
+    image: n8nio/n8n:1.85.1
     container_name: fwt-n8n
     ports:
       - "5678:5678"
@@ -26,6 +26,9 @@ services:
       N8N_HOST: localhost
       N8N_PORT: 5678
       N8N_PROTOCOL: http
+      # Erlaubt UI-Zugriff via IP/Hostname ohne TLS - fuer Dev/VM-Test okay,
+      # in Production durch Reverse-Proxy mit TLS ersetzen (siehe docs/setup-debian-13.md Step 9c)
+      N8N_SECURE_COOKIE: "${N8N_SECURE_COOKIE:-false}"
       WEBHOOK_URL: http://localhost:5678/
       N8N_DIAGNOSTICS_ENABLED: "false"
       N8N_HIRING_BANNER_ENABLED: "false"

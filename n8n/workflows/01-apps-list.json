@@ -27,7 +27,7 @@
       "typeVersion": 2.5,
       "position": [480, 300],
       "credentials": {
-        "postgres": { "name": "Postgres FlexWorkTwin" }
+        "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
     },
     {

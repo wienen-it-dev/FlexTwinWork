@@ -130,21 +130,33 @@ rsync -av --progress \
 
 ## 6. Umgebungsvariablen vorbereiten
 
+> **Achtung — Reihenfolge ist kritisch:** Die `.env` MUSS **vor** dem allerersten `docker compose up` korrekt befüllt sein. n8n speichert den Encryption-Key beim ersten Start in seinem Volume; ein späterer Wechsel des Keys bricht den Container, weil die alten Credentials nicht mehr entschlüsselt werden können. Dann hilft nur noch `docker compose down -v` und neu starten.
+
 ```bash
 cd /opt/flexworktwin   # oder wo du die Files hingelegt hast
 cp .env.example .env
-nano .env
 ```
 
-Mindestens setzen:
+Einen kryptografisch tauglichen Encryption-Key generieren und merken:
+
+```bash
+openssl rand -hex 32
+# z.B. ab12cd34ef56...   <- 64 Hex-Zeichen kopieren
+```
+
+Dann `.env` editieren und alle Platzhalter durch echte Werte ersetzen:
+
+```bash
+nano .env
+```
 
 ```ini
 POSTGRES_DB=flexworktwin
 POSTGRES_USER=fwt
-POSTGRES_PASSWORD=<NEUES_PASSWORT>
+POSTGRES_PASSWORD=<HIER_PASSWORT_EINTRAGEN>
 
-# Wichtig: ein konsistenter Schlüssel, sobald produktiv eingesetzt
-N8N_ENCRYPTION_KEY=<MINDESTENS_32_ZEICHEN_RANDOM>
+# Genau der Wert aus 'openssl rand -hex 32' - keine Anführungszeichen, keine Leerzeichen
+N8N_ENCRYPTION_KEY=<HIER_64_HEX_ZEICHEN_EINTRAGEN>
 
 # Public-URL der n8n-Instanz - im LAN/VM die IP der VM eintragen
 VITE_N8N_BASE=http://<VM-IP>:5678/webhook
@@ -205,10 +217,12 @@ Wenn `apps` ein JSON-Array (mindestens mit der seedeten Demo-App) zurückliefert
 
 ## 9. Frontends bauen und ausliefern
 
+> **Hinweis zum Pfad:** Wenn du in Step 5 mit `git clone <URL>` ohne abschließenden `.` gearbeitet hast, liegt der Code unter `/opt/flexworktwin/FlexTwinWork/`. Diese Anleitung nutzt diesen Pfad. Wenn dein Projekt direkt in `/opt/flexworktwin/` liegt, einfach `/FlexTwinWork` aus den Pfaden streichen.
+
 ### 9a) Variante "Dev-Server" (für Entwicklung / interner Test)
 
 ```bash
-cd /opt/flexworktwin
+cd /opt/flexworktwin/FlexTwinWork
 npm install --no-fund --no-audit
 ```
 
@@ -231,14 +245,19 @@ Aufruf: `http://<VM-IP>:5174` (Editor), `http://<VM-IP>:5175` (Runtime).
 Frontends bauen:
 
 ```bash
-cd /opt/flexworktwin
+cd /opt/flexworktwin/FlexTwinWork
 
-# Build-Time die Webhook-URL setzen, damit sie ins JS gebacken wird
-echo "VITE_N8N_BASE=http://<VM-IP>:5678/webhook" > apps/editor/.env.production
-echo "VITE_N8N_BASE=http://<VM-IP>:5678/webhook" > apps/runtime/.env.production
+# Build-Time die Webhook-URL setzen, damit sie ins JS gebacken wird.
+# '/webhook' (relativ) verwenden, wenn Caddy die Frontends + n8n unter gleicher Origin ausliefert.
+echo "VITE_N8N_BASE=/webhook" > apps/editor/.env.production
+echo "VITE_N8N_BASE=/webhook" > apps/runtime/.env.production
 
 npm install --no-fund --no-audit
-npm run build
+
+# WICHTIG: jeden Workspace mit dem passenden --base bauen, sonst kommen die Asset-Pfade
+# nicht durch Caddy's handle_path durch (Symptom: leere Seite, 404 in Network-Tab).
+npm --workspace @fwt/editor run build -- --base=/editor/
+npm --workspace @fwt/runtime run build -- --base=/runtime/
 ```
 
 Es entstehen `apps/editor/dist/` und `apps/runtime/dist/` — statische Dateien.
@@ -260,14 +279,14 @@ Caddyfile (`/etc/caddy/Caddyfile`):
 :80 {
   # Editor
   handle_path /editor/* {
-    root * /opt/flexworktwin/apps/editor/dist
+    root * /opt/flexworktwin/FlexTwinWork/apps/editor/dist
     try_files {path} /index.html
     file_server
   }
 
   # Runtime (Werker am Tisch)
   handle_path /runtime/* {
-    root * /opt/flexworktwin/apps/runtime/dist
+    root * /opt/flexworktwin/FlexTwinWork/apps/runtime/dist
     try_files {path} /index.html
     file_server
   }
@@ -288,7 +307,7 @@ Aktivieren:
 sudo systemctl reload caddy
 ```
 
-> Wenn du Frontends + n8n hinter dem gleichen Caddy-Host liegen lässt, kannst du `VITE_N8N_BASE=/webhook` (relativ) bauen — dann ist die App ortsunabhängig. Das ist sauberer als die VM-IP hartzucodieren.
+> Caddy braucht Lese-Rechte auf die `dist/`-Ordner. Falls Caddy 403 liefert: `sudo chmod -R o+rX /opt/flexworktwin/FlexTwinWork/apps/editor/dist /opt/flexworktwin/FlexTwinWork/apps/runtime/dist` (macht das `dist`-Verzeichnis weltlesbar).
 
 Jetzt erreichbar:
 
@@ -358,10 +377,19 @@ docker exec fwt-postgres pg_dump -U fwt -Fc flexworktwin \
   > /var/backups/flexworktwin/fwt-$(date +%F).dump
 ```
 
-n8n-Workflows sind im Code-Repo (`n8n/workflows/*.json`) — also schon versioniert. Ggf. zusätzlich das n8n-Daten-Volume sichern:
+n8n-Workflows sind im Code-Repo (`n8n/workflows/*.json`) — also schon versioniert. Ggf. zusätzlich das n8n-Daten-Volume sichern. Den Volume-Namen einmal nachschlagen (Compose leitet ihn vom Verzeichnis-Namen ab, kleingeschrieben):
 
 ```bash
-docker run --rm -v fwt_n8n-data:/data -v /var/backups/flexworktwin:/backup alpine \
+docker volume ls | grep n8n
+# z.B. flextwinwork_n8n-data    bei Projekt /opt/flexworktwin/FlexTwinWork
+# oder flexworktwin_n8n-data     wenn das Projekt direkt in /opt/flexworktwin liegt
+```
+
+Mit dem korrekten Namen sichern:
+
+```bash
+VOLUME=$(docker volume ls --format '{{.Name}}' | grep n8n-data | head -1)
+docker run --rm -v "$VOLUME":/data -v /var/backups/flexworktwin:/backup alpine \
   tar czf /backup/n8n-data-$(date +%F).tar.gz -C /data .
 ```
 
@@ -385,12 +413,18 @@ Wenn alle Schritte funktionieren: System läuft. Bei Problemen siehe nächster A
 
 | Symptom | Ursache | Lösung |
 |---|---|---|
+| `Mismatching encryption keys` in n8n-Logs, Container startet nicht | Der Key in `/home/node/.n8n/config` (im Volume) passt nicht mehr zum env-Wert. Häufig: erster Start lief mit Default, danach `.env` mit anderem Wert geändert | `docker compose down -v` (löscht Volumes, alles weg), `.env` mit endgültigem `N8N_ENCRYPTION_KEY` befüllen (`openssl rand -hex 32`), `docker compose up -d` |
+| `curl http://localhost:5678` liefert `000` | n8n läuft nicht oder ist noch im Bootstrap | `docker compose ps` und `docker compose logs n8n --tail=80` prüfen |
 | Frontends zeigen "API offline" | n8n nicht erreichbar oder CORS blockiert | `docker compose logs n8n`, prüfen ob CORS-Origins in `docker-compose.yml` zu deiner URL passen |
 | 404 von `/webhook/apps` | Workflows nicht aktiviert | n8n-UI öffnen, Workflows aktivieren (Toggle) |
 | n8n verlangt Owner-Setup | Neuere n8n-Version | Einmalig Owner anlegen, dann läuft alles |
 | `relation "apps" does not exist` | init.sql nicht gelaufen | Postgres-Volume war nicht leer beim ersten Start. `docker compose down -v` und neu starten |
 | Block-Drag in Blockly hakt | Alter Build im Browser-Cache | Hard-Reload (Strg+Shift+R) |
 | n8n-Bootstrap ignoriert Aktualisierungen | Marker-File `.fwt-imported` existiert | `docker compose exec n8n rm /home/node/.n8n/.fwt-imported` und Container restart |
+| n8n-UI: "configured to use a secure cookie" / Login geht nicht | n8n erzwingt bei Nicht-`localhost`-Zugriff entweder TLS oder Cookie-Mode aus | `N8N_SECURE_COOKIE=false` in Compose setzen (Default in diesem Repo) **oder** TLS via Caddy davor (Step 9c) |
+| `no configuration file provided: not found` bei `docker compose` | Du bist im falschen Verzeichnis (Projekt liegt eine Ebene tiefer als erwartet) | `pwd` prüfen, in den Ordner mit `docker-compose.yml` wechseln (oder Inhalt von `<repo>/` flach in `/opt/flexworktwin/` ziehen) |
+| `/editor/` oder `/runtime/` zeigt leere Seite, Network-Tab zeigt 404 auf `/assets/...` | Build wurde ohne `--base` gemacht, Asset-Pfade gehen an Caddys `handle_path` vorbei | Mit `--base=/editor/` bzw. `--base=/runtime/` neu bauen (siehe 9b), dann Hard-Reload im Browser |
+| n8n-Logs zeigen endlos `Found credential with no ID` bei jedem Webhook | Workflow-JSON referenziert Credential nur mit `name`, n8n ≥1.80 verlangt zusätzlich `id` | Sicherstellen dass `n8n/credentials.json` ein `"id"`-Feld hat und alle Workflows `"credentials": { "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" } }` referenzieren. Dann `docker compose down -v` + `docker compose up -d` (Volumes weg, neu importieren) |
 
 ---
 
@@ -413,7 +447,7 @@ Wenn neue Workflows hinzukommen oder bestehende geändert werden:
 
 ```bash
 # Code aktualisieren
-cd /opt/flexworktwin
+cd /opt/flexworktwin/FlexTwinWork
 git pull   # oder neu rsyncen
 
 # Marker entfernen, damit n8n beim Restart die Workflows neu importiert
@@ -425,6 +459,10 @@ docker compose restart n8n
 # Frontends neu bauen, falls Code geändert
 npm install
 npm run build
+
+# Caddy serviert die neuen dist/-Inhalte ohne Reload, da gleiche Pfade.
+# Bei Caddy-Konfig-Aenderung:
+sudo systemctl reload caddy
 ```
 
 > Für ein produktives Update-Verfahren empfiehlt sich ein eigenes Deploy-Skript, das Postgres-Backup → Stack-Update → Rauchtest in einer Pipeline ausführt. Das ist ein eigener Schritt, sobald wir vom Test-Setup auf Produktion gehen.
