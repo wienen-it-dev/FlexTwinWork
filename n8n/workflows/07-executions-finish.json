@@ -20,24 +20,35 @@
     },
     {
       "parameters": {
+        "jsCode": "// Finish hat nur status (string ohne Kommas: 'finished'/'aborted') — kein base64 noetig.\nconst item = $input.first().json;\nconst id = (item.params && item.params.id) || '';\nconst status = (item.body && item.body.status) || 'finished';\nreturn [{ json: { id, status } }];"
+      },
+      "id": "code-exec-finish-prep",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE executions SET finished_at = now(), status = COALESCE(($2::jsonb)->>'status','finished') WHERE id = $1::uuid RETURNING id::text AS id, status",
+        "query": "UPDATE executions SET finished_at = now(), status = COALESCE($2, status) WHERE id = $1::uuid RETURNING id::text AS id, status",
         "options": {
-          "queryReplacement": "={{ JSON.stringify([$json.params.id, $json.body || {}]) }}"
+          "queryReplacement": "={{ $json.id }},={{ $json.status }}"
         }
       },
       "id": "pg-exec-finish",
       "name": "Finish Execution",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [480, 300],
+      "position": [680, 300],
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Finish Execution", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Finish Execution", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }

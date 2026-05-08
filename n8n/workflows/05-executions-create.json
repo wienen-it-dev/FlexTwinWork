@@ -20,24 +20,35 @@
     },
     {
       "parameters": {
+        "jsCode": "// Body als base64, um den Comma-Split in n8n's queryReplacement zu umgehen.\nconst body = $input.first().json.body || {};\nconst body_b64 = Buffer.from(JSON.stringify(body), 'utf8').toString('base64');\nreturn [{ json: { body_b64 } }];"
+      },
+      "id": "code-exec-create-prep",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO executions (app_id, app_version, workplace_id, worker_id) SELECT (($1::jsonb)->>'app_id')::uuid, (SELECT current_version FROM apps WHERE id = (($1::jsonb)->>'app_id')::uuid), ($1::jsonb)->>'workplace_id', ($1::jsonb)->>'worker_id' RETURNING id::text AS execution_id",
+        "query": "WITH body AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j) INSERT INTO executions (app_id, app_version, workplace_id, worker_id) SELECT (j->>'app_id')::uuid, (SELECT current_version FROM apps WHERE id = (j->>'app_id')::uuid), j->>'workplace_id', j->>'worker_id' FROM body RETURNING id::text AS execution_id",
         "options": {
-          "queryReplacement": "={{ JSON.stringify([$json.body]) }}"
+          "queryReplacement": "={{ $json.body_b64 }}"
         }
       },
       "id": "pg-exec-create",
       "name": "Insert Execution",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [480, 300],
+      "position": [680, 300],
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Insert Execution", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Insert Execution", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }

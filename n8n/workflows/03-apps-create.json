@@ -20,24 +20,35 @@
     },
     {
       "parameters": {
+        "jsCode": "// n8n Postgres v2.5 splittet queryReplacement an Kommas. Body-JSON enthaelt\n// jedoch Kommas — daher base64-encoden und in SQL via decode() zurueckholen.\nconst body = $input.first().json.body || {};\nconst b64 = (v) => Buffer.from(JSON.stringify(v ?? null), 'utf8').toString('base64');\nreturn [{ json: { body_b64: b64(body) } }];"
+      },
+      "id": "code-apps-create-prep",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "WITH new_app AS (INSERT INTO apps (name) VALUES (($1::jsonb)->>'name') RETURNING id), new_ver AS (INSERT INTO app_versions (app_id, version, metadata, steps, blockly_state) SELECT id, 1, ($1::jsonb)->'metadata', ($1::jsonb)->'steps', ($1::jsonb)->'blockly_state' FROM new_app RETURNING app_id) SELECT app_id::text AS id FROM new_ver",
+        "query": "WITH body AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j), new_app AS (INSERT INTO apps (name) SELECT j->>'name' FROM body RETURNING id), new_ver AS (INSERT INTO app_versions (app_id, version, metadata, steps, blockly_state) SELECT id, 1, (SELECT j->'metadata' FROM body), (SELECT j->'steps' FROM body), (SELECT j->'blockly_state' FROM body) FROM new_app RETURNING app_id) SELECT app_id::text AS id FROM new_ver",
         "options": {
-          "queryReplacement": "={{ JSON.stringify([$json.body]) }}"
+          "queryReplacement": "={{ $json.body_b64 }}"
         }
       },
       "id": "pg-apps-create",
       "name": "Insert App",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [480, 300],
+      "position": [680, 300],
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Insert App", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Insert App", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }

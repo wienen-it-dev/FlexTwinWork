@@ -20,24 +20,35 @@
     },
     {
       "parameters": {
+        "jsCode": "// UUID hat keine Kommas (passt direkt in queryReplacement). Body-JSON wird base64-encoded\n// um den Comma-Split von n8n's queryReplacement zu umgehen.\nconst item = $input.first().json;\nconst id = (item.params && item.params.id) || '';\nconst body = item.body || {};\nconst body_b64 = Buffer.from(JSON.stringify(body), 'utf8').toString('base64');\nreturn [{ json: { id, body_b64 } }];"
+      },
+      "id": "code-apps-update-prep",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "WITH bumped AS (UPDATE apps SET current_version = current_version + 1, updated_at = now(), name = COALESCE(($2::jsonb)->>'name', name), status = COALESCE(($2::jsonb)->>'status', status) WHERE id = $1::uuid RETURNING id, current_version), new_ver AS (INSERT INTO app_versions (app_id, version, metadata, steps, blockly_state) SELECT id, current_version, ($2::jsonb)->'metadata', ($2::jsonb)->'steps', ($2::jsonb)->'blockly_state' FROM bumped RETURNING app_id, version) SELECT app_id::text AS id, version FROM new_ver",
+        "query": "WITH body AS (SELECT convert_from(decode($2, 'base64'), 'UTF8')::jsonb AS j), bumped AS (UPDATE apps SET current_version = current_version + 1, updated_at = now(), name = COALESCE((SELECT j->>'name' FROM body), name), status = COALESCE((SELECT j->>'status' FROM body), status) WHERE id = $1::uuid RETURNING id, current_version), new_ver AS (INSERT INTO app_versions (app_id, version, metadata, steps, blockly_state) SELECT id, current_version, (SELECT j->'metadata' FROM body), (SELECT j->'steps' FROM body), (SELECT j->'blockly_state' FROM body) FROM bumped RETURNING app_id, version) SELECT app_id::text AS id, version FROM new_ver",
         "options": {
-          "queryReplacement": "={{ JSON.stringify([$json.params.id, $json.body]) }}"
+          "queryReplacement": "={{ $json.id }},={{ $json.body_b64 }}"
         }
       },
       "id": "pg-apps-update",
       "name": "Update App",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [480, 300],
+      "position": [680, 300],
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Update App", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Update App", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }

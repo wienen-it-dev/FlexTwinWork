@@ -20,24 +20,35 @@
     },
     {
       "parameters": {
+        "jsCode": "// UUID direkt, Body base64. queryReplacement ist comma-separated; UUID hat keine Kommas.\nconst item = $input.first().json;\nconst id = (item.params && item.params.id) || '';\nconst body = item.body || {};\nconst body_b64 = Buffer.from(JSON.stringify(body), 'utf8').toString('base64');\nreturn [{ json: { id, body_b64 } }];"
+      },
+      "id": "code-exec-step-prep",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "WITH ins AS (INSERT INTO execution_steps (execution_id, step_index, step_type, step_id, outcome, variables) VALUES ($1::uuid, (($2::jsonb)->>'step_index')::int, ($2::jsonb)->>'step_type', ($2::jsonb)->>'step_id', ($2::jsonb)->>'outcome', ($2::jsonb)->'variables') RETURNING execution_id) UPDATE executions SET variables = ($2::jsonb)->'variables' WHERE id = $1::uuid RETURNING true AS ok",
+        "query": "WITH body AS (SELECT convert_from(decode($2, 'base64'), 'UTF8')::jsonb AS j), ins AS (INSERT INTO execution_steps (execution_id, step_index, step_type, step_id, outcome, variables) SELECT $1::uuid, ((SELECT j->>'step_index' FROM body))::int, (SELECT j->>'step_type' FROM body), (SELECT j->>'step_id' FROM body), (SELECT j->>'outcome' FROM body), (SELECT j->'variables' FROM body) RETURNING execution_id) UPDATE executions SET variables = (SELECT j->'variables' FROM body) WHERE id = $1::uuid RETURNING true AS ok",
         "options": {
-          "queryReplacement": "={{ JSON.stringify([$json.params.id, $json.body]) }}"
+          "queryReplacement": "={{ $json.id }},={{ $json.body_b64 }}"
         }
       },
       "id": "pg-exec-step",
       "name": "Insert Step",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [480, 300],
+      "position": [680, 300],
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Insert Step", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Prepare", "type": "main", "index": 0 }]] },
+    "Prepare": { "main": [[{ "node": "Insert Step", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }
