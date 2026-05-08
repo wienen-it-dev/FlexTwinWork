@@ -6,8 +6,10 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "executions/:id/finish",
-        "responseMode": "responseNode",
-        "options": {}
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "firstEntryJson"
+        }
       },
       "id": "wh-exec-finish",
       "name": "Webhook",
@@ -32,22 +34,10 @@
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
-    },
-    {
-      "parameters": {
-        "respondWith": "firstIncomingItem",
-        "options": {}
-      },
-      "id": "resp-exec-finish",
-      "name": "Respond",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [720, 300]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Finish Execution", "type": "main", "index": 0 }]] },
-    "Finish Execution": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Finish Execution", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }

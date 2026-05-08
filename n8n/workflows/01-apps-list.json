@@ -6,8 +6,10 @@
       "parameters": {
         "httpMethod": "GET",
         "path": "apps",
-        "responseMode": "responseNode",
-        "options": {}
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "allEntries"
+        }
       },
       "id": "wh-apps-list",
       "name": "Webhook",
@@ -30,22 +32,10 @@
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
-    },
-    {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "id": "resp-apps-list",
-      "name": "Respond",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [720, 300]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Query Apps", "type": "main", "index": 0 }]] },
-    "Query Apps": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Query Apps", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }
