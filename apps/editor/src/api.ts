@@ -22,13 +22,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text().catch(() => '')
     throw new Error(`API ${res.status} ${res.statusText}: ${text}`)
   }
-  const data = await res.json()
-  return data as T
+  // n8n liefert bei `responseMode: "lastNode"` und 0 Items einen leeren Body.
+  const text = await res.text()
+  if (!text.trim()) return undefined as T
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new Error(`API: ungueltiges JSON in Antwort: ${text.slice(0, 200)}`)
+  }
 }
 
 export const api = {
   // statisch: /webhook/apps
-  listApps: () => request<AppListItem[]>('/apps'),
+  listApps: async () => (await request<AppListItem[]>('/apps')) ?? [],
 
   // dynamisch: /webhook/<whid>/apps/:id
   getApp: (id: string) =>
