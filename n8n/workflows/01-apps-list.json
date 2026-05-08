@@ -8,7 +8,7 @@
         "path": "apps",
         "responseMode": "lastNode",
         "options": {
-          "responseData": "allEntries"
+          "responseData": "firstEntryJson"
         }
       },
       "id": "wh-apps-list",
@@ -32,10 +32,21 @@
       "credentials": {
         "postgres": { "id": "fwt-pg", "name": "Postgres FlexWorkTwin" }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bundelt alle Postgres-Rows in ein einzelnes Item, dessen json eine 'items'-Property\n// mit dem Array enthaelt. Der Webhook antwortet via firstEntryJson mit genau diesem json.\n// So bekommt der Client { items: [...] } zurueck — deterministisch in n8n 1.85.\nconst rows = $input.all().map(i => i.json);\nreturn [{ json: { items: rows } }];"
+      },
+      "id": "code-apps-list-aggregate",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
     }
   ],
   "connections": {
-    "Webhook": { "main": [[{ "node": "Query Apps", "type": "main", "index": 0 }]] }
+    "Webhook": { "main": [[{ "node": "Query Apps", "type": "main", "index": 0 }]] },
+    "Query Apps": { "main": [[{ "node": "Aggregate", "type": "main", "index": 0 }]] }
   },
   "active": true,
   "settings": { "executionOrder": "v1" }

@@ -33,9 +33,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+// Der List-Workflow verpackt die Postgres-Rows in { items: [...] }, weil n8n 1.85
+// `responseData: "allEntries"` empirisch nicht zuverlaessig ein Array zurueckgibt.
+// Diese Helper-Funktion kommt mit allen denkbaren Antwort-Shapes klar.
+function normalizeList<T>(raw: unknown): T[] {
+  if (raw === null || raw === undefined) return []
+  if (Array.isArray(raw)) return raw as T[]
+  if (typeof raw === 'object') {
+    const obj = raw as { items?: unknown }
+    if (Array.isArray(obj.items)) return obj.items as T[]
+    return [raw as T]
+  }
+  return []
+}
+
 export const api = {
   // statisch: /webhook/apps
-  listApps: async () => (await request<AppListItem[]>('/apps')) ?? [],
+  listApps: async () => normalizeList<AppListItem>(await request<unknown>('/apps')),
 
   // dynamisch: /webhook/<whid>/apps/:id
   getApp: (id: string) =>
