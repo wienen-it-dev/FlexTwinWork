@@ -1,4 +1,5 @@
 {
+  "id": "fwt-wf-apps-create",
   "name": "FWT - POST /apps (create)",
   "nodes": [
     {

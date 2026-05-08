@@ -1,4 +1,5 @@
 {
+  "id": "fwt-wf-apps-update",
   "name": "FWT - PUT /apps/:id (update / new version)",
   "nodes": [
     {

@@ -1,4 +1,5 @@
 {
+  "id": "fwt-wf-exec-step",
   "name": "FWT - POST /executions/:id/step (log)",
   "nodes": [
     {

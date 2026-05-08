@@ -1,4 +1,5 @@
 {
+  "id": "fwt-wf-exec-create",
   "name": "FWT - POST /executions (start)",
   "nodes": [
     {

@@ -1,4 +1,5 @@
 {
+  "id": "fwt-wf-apps-list",
   "name": "FWT - GET /apps (list)",
   "nodes": [
     {

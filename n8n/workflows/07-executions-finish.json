@@ -1,4 +1,5 @@
 {
+  "id": "fwt-wf-exec-finish",
   "name": "FWT - POST /executions/:id/finish",
   "nodes": [
     {

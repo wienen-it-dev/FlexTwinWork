@@ -1,4 +1,5 @@
 {
+  "id": "fwt-wf-int-fwd",
   "name": "FWT - POST /integration/forward (Schnittstellen-Block)",
   "nodes": [
     {

@@ -1,4 +1,5 @@
 {
+  "id": "fwt-wf-apps-get",
   "name": "FWT - GET /apps/:id (detail)",
   "nodes": [
     {
